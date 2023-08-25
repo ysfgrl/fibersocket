@@ -28,6 +28,7 @@ type serverPool struct {
 type SocketServer struct {
 	sync.RWMutex
 	UUID         string
+	Name         string
 	socketList   map[string]*FiberSocket
 	onMessage    onMessage
 	onConnection onEvent
@@ -56,11 +57,12 @@ var sPool = serverPool{
 	serverList: make(map[string]*SocketServer),
 }
 
-func NewSocketServer() *SocketServer {
+func NewSocketServer(name string) *SocketServer {
 	UUID := uuid.New().String()
 	sPool.addServer(&SocketServer{
 		socketList: make(map[string]*FiberSocket),
 		UUID:       UUID,
+		Name:       name,
 		onMessage: func(fs *FiberSocket, data []byte) {
 			fmt.Println("--------New Message---------")
 			fmt.Println("Server ID:" + fs.ServerUUID)
@@ -92,6 +94,7 @@ func NewSocketServer() *SocketServer {
 	})
 	return sPool.getServer(UUID)
 }
+
 func (ss *SocketServer) NewSocket() func(*fiber.Ctx) error {
 	return websocket.New(func(c *websocket.Conn) {
 		fs := &FiberSocket{
@@ -133,8 +136,29 @@ func (sp *serverPool) getServer(UUID string) *SocketServer {
 	}
 	return ret
 }
+func (sp *serverPool) getServerByName(name string) *SocketServer {
+	sp.RLock()
+	ok := false
+	var server *SocketServer = nil
+	for _, s := range sp.serverList {
+		if s.Name == name {
+			ok = true
+			server = s
+			break
+		}
+	}
+	sp.RUnlock()
+	if !ok {
+		return nil
+	}
+	return server
+}
 func GetServerById(UUID string) *SocketServer {
 	return sPool.getServer(UUID)
+}
+
+func GetServerByName(name string) *SocketServer {
+	return sPool.getServerByName(name)
 }
 
 func (ss *SocketServer) addSocket(fs *FiberSocket) {
