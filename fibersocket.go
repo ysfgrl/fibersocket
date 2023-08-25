@@ -151,6 +151,15 @@ func (ss *SocketServer) removeSocket(key string) {
 	ss.Unlock()
 }
 
+func (ss *SocketServer) Emit(message []byte) {
+	for id := range ss.socketList {
+		ss.EmitTo(id, message)
+	}
+}
+func (ss *SocketServer) EmitTo(id string, message []byte) {
+	ss.socketList[id].Emit(message)
+}
+
 func (ss *SocketServer) OnMessage(callback onMessage) {
 	ss.onMessage = callback
 }
@@ -255,7 +264,6 @@ func (fs *FiberSocket) read(ctx context.Context) {
 	}
 }
 
-// Send out message queue
 func (fs *FiberSocket) sendQue(ctx context.Context) {
 	for {
 		select {
